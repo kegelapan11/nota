@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nota Toko Maju Jaya</title>
+<style>
+body {
+  font-family: "Courier New", monospace;
+  background: #f4f4f4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+#nota {
+  width: 58mm;
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  margin-bottom: 10px;
+}
+h2, p {
+  text-align: center;
+  margin: 2px 0;
+}
+hr {
+  border: none;
+  border-top: 1px dashed #000;
+  margin: 4px 0;
+}
+table {
+  width: 100%;
+  font-size: 13px;
+}
+th, td {
+  text-align: left;
+}
+td:last-child {
+  text-align: right;
+}
+button {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  border: none;
+  background: #222;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+button:hover {
+  background: #555;
+}
+input {
+  width: 100%;
+  padding: 5px;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.btn-hapus {
+  background: red;
+  color: white;
+  border: none;
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.btn-hapus:hover {
+  background: darkred;
+}
+@media print {
+  body * { visibility: hidden; }
+  #nota, #nota * { visibility: visible; }
+  #nota {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none;
+    margin: 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="nota">
+  <h2>YM PRINT</h2>
+  <p>Jl. Paingan (depan SMA Sudirman)</p>
+  <p>wa: 085700135432</p>
+  <p id="tanggal"></p>
+  <hr>
+
+  <table id="tabelBarang">
+    <thead>
+      <tr><th>Barang</th><th>Qty×Harga</th><th>Total</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <hr>
+
+  <p class="total" id="total">Total: Rp 0</p>
+  <hr>
+  <p style="text-align:center;">Terima kasih telah berbelanja 🙏</p>
+</div>
+
+<div style="width:58mm;">
+  <input type="text" id="barang" placeholder="Nama Barang">
+  <input type="number" id="jumlah" placeholder="Jumlah" min="1">
+  <input type="number" id="harga" placeholder="Harga Satuan">
+  <button onclick="tambahBarang()">Tambah Barang</button>
+  <button onclick="cetakNota()">🖨️ Cetak Nota</button>
+  <button style="background:#b33;" onclick="clearNota()">🧾 Clear Nota</button>
+</div>
+
+<script>
+let total = 0;
+
+// Format tanggal + jam otomatis
+function updateTanggal() {
+  const now = new Date();
+  const tgl = now.toLocaleDateString('id-ID', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+  const jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('tanggal').textContent = `${tgl} ${jam}`;
+}
+updateTanggal(); // panggil saat awal
+
+function tambahBarang() {
+  const nama = document.getElementById('barang').value.trim();
+  const jumlah = parseFloat(document.getElementById('jumlah').value);
+  const harga = parseFloat(document.getElementById('harga').value);
+  if (!nama || !jumlah || !harga) return alert('Lengkapi semua kolom!');
+  
+  const subtotal = jumlah * harga;
+  const tbody = document.querySelector('#tabelBarang tbody');
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${nama}</td>
+    <td>${jumlah}×${harga.toLocaleString('id-ID')}</td>
+    <td>Rp ${subtotal.toLocaleString('id-ID')}</td>
+    <td><button class="btn-hapus" onclick="hapusBarang(this, ${subtotal})">X</button></td>
+  `;
+  tbody.appendChild(tr);
+
+  total += subtotal;
+  updateTotal();
+
+  document.getElementById('barang').value = '';
+  document.getElementById('jumlah').value = '';
+  document.getElementById('harga').value = '';
+  document.getElementById('barang').focus();
+
+  updateTanggal(); // update waktu setiap transaksi
+}
+
+function hapusBarang(button, subtotal) {
+  if (confirm("Hapus barang ini?")) {
+    const tr = button.parentElement.parentElement;
+    tr.remove();
+    total -= subtotal;
+    if (total < 0) total = 0;
+    updateTotal();
+  }
+}
+
+function clearNota() {
+  if (confirm("Hapus semua isi nota dan mulai baru?")) {
+    document.querySelector('#tabelBarang tbody').innerHTML = '';
+    total = 0;
+    updateTotal();
+    updateTanggal();
+  }
+}
+
+function updateTotal() {
+  document.getElementById('total').textContent = 'Total: Rp ' + total.toLocaleString('id-ID');
+}
+
+function cetakNota() {
+  window.print();
+}
+
+// Tekan Enter untuk tambah barang
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    tambahBarang();
+  }
+});
+</script>
+
+</body>
+</html>
