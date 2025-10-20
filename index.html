@@ -142,7 +142,7 @@ function tambahBarang() {
   tr.innerHTML = `
     <td>${nama}</td>
     <td>${jumlah}×${harga.toLocaleString('id-ID')}</td>
-    <td>Rp ${subtotal.toLocaleString('id-ID')}</td>
+    <td>${subtotal.toLocaleString('id-ID')}</td>
     <td><button class="btn-hapus" onclick="hapusBarang(this, ${subtotal})">X</button></td>
   `;
   tbody.appendChild(tr);
@@ -216,5 +216,6 @@ document.addEventListener('keydown', function(e) {
 
 </body>
 </html>
+
 
 
