@@ -1,12 +1,12 @@
 #!/bin/bash
 # ======================================================
-# CASAOS AUTO INSTALLER + AUTO DETECT CONFIG + NGINX SSL
-# Domain: celengstore.my.id
-# Port: 110400
-# Tested on Ubuntu 22.04 + Xray Installed
+# CASAOS AUTO INSTALLER + SUBDOMAIN + SSL
+# Domain: casa.celengstore.my.id (tidak bentrok dengan Xray)
+# Port internal: 110400
+# Tested on Ubuntu 22.04 + Xray + Nginx
 # ======================================================
 
-DOMAIN="celengstore.my.id"
+SUBDOMAIN="casa.celengstore.my.id"
 PORT=110400
 
 set -e
@@ -27,11 +27,10 @@ curl -fsSL https://get.casaos.io | bash || {
 }
 
 # ======================================================
-# 2️⃣ Cari file konfigurasi CasaOS
+# 2️⃣ Deteksi konfigurasi CasaOS
 # ======================================================
 echo -e "\n🔍 Mendeteksi lokasi konfigurasi CasaOS..."
 CONF_PATH=""
-
 for path in \
     "/etc/casaos/gateway.conf" \
     "/var/lib/casaos/gateway/conf/gateway.conf" \
@@ -44,10 +43,10 @@ for path in \
 done
 
 if [ -n "$CONF_PATH" ]; then
-    echo "✅ Ditemukan: $CONF_PATH"
+    echo "✅ Konfigurasi ditemukan: $CONF_PATH"
     sed -i "s/\"port\": *[0-9]\+/\"port\": ${PORT}/" "$CONF_PATH"
 else
-    echo "⚠️ Tidak ditemukan gateway.conf, menggunakan environment service..."
+    echo "⚙️ Menambahkan environment service CASA_PORT=${PORT}"
     mkdir -p /etc/systemd/system/casaos-gateway.service.d
     cat >/etc/systemd/system/casaos-gateway.service.d/override.conf <<EOF
 [Service]
@@ -60,22 +59,18 @@ fi
 # ======================================================
 # 3️⃣ Restart CasaOS
 # ======================================================
-echo -e "\n🔁 Restart service CasaOS..."
+echo -e "\n🔁 Restart CasaOS..."
 systemctl restart casaos-gateway || true
 systemctl restart casaos || true
 
 # ======================================================
-# 4️⃣ Setup Firewall + Nginx Reverse Proxy
+# 4️⃣ Nginx Reverse Proxy untuk subdomain
 # ======================================================
-echo -e "\n🌐 Membuka port firewall..."
-ufw allow ${PORT}/tcp || true
-ufw allow 'Nginx Full' || true
-
-echo -e "\n🧱 Konfigurasi Nginx reverse proxy..."
+echo -e "\n🌐 Konfigurasi Nginx untuk subdomain ${SUBDOMAIN}..."
 cat >/etc/nginx/sites-available/casaos.conf <<EOF
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name ${SUBDOMAIN};
 
     location / {
         proxy_pass http://127.0.0.1:${PORT};
@@ -91,11 +86,14 @@ ln -sf /etc/nginx/sites-available/casaos.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl restart nginx
 
 # ======================================================
-# 5️⃣ Pasang SSL
+# 5️⃣ Firewall & SSL
 # ======================================================
-echo -e "\n🔐 Pasang SSL (Let's Encrypt)..."
-certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m admin@${DOMAIN} || {
-    echo "⚠️ SSL gagal dipasang. Coba manual dengan: certbot --nginx -d ${DOMAIN}"
+echo -e "\n🧱 Membuka firewall dan pasang SSL..."
+ufw allow ${PORT}/tcp || true
+ufw allow 'Nginx Full' || true
+
+certbot --nginx -d ${SUBDOMAIN} --non-interactive --agree-tos -m admin@${SUBDOMAIN} || {
+    echo "⚠️ SSL gagal dipasang. Coba manual dengan: certbot --nginx -d ${SUBDOMAIN}"
 }
 
 # ======================================================
@@ -103,7 +101,7 @@ certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m admin@${DOMAIN} ||
 # ======================================================
 echo -e "\n✅ Instalasi CasaOS selesai!"
 echo "-----------------------------------------------------"
-echo "🌍 Akses CasaOS di: https://${DOMAIN}"
+echo "🌍 Akses CasaOS di: https://${SUBDOMAIN}"
 echo "Port internal CasaOS: ${PORT}"
-echo "Konfigurasi Nginx: /etc/nginx/sites-available/casaos.conf"
+echo "SSL: /etc/letsencrypt/live/${SUBDOMAIN}/"
 echo "-----------------------------------------------------"
